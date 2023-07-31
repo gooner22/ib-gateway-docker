@@ -21,6 +21,6 @@ jobs:
         with:
             username: ${{ secrets.DOCKERHUB_USERNAME }}
             password: ${{ secrets.DOCKERHUB_PASSWORD }}
-            repository: manhinhang/ib-gateway-docker
+            repository: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_IMAGE }}
             tag_with_ref: true
  
