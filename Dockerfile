@@ -1,6 +1,6 @@
 FROM python:3.11-slim
-ARG IBC_VER="3.16.2"
-ARG IB_INSYNC_VER="0.9.85"
+ARG IBC_VER="3.18.0"
+ARG IB_INSYNC_VER="0.9.86"
 
 # install dependencies
 RUN  apt-get update \
