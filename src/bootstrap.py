@@ -1,20 +1,28 @@
-from ib_insync import IBC, IB, Watchdog
+from ib_insync import IBC, IB, Watchdog, util, Stock
 import os
 import logging
 from ib_account import IBAccount
 import sys
 
 if __name__ == "__main__":
+    ib_logging_level = str(os.environ['IB_LOGGING_LEVEL'])
+    ib_port = int(os.environ['IB_PORT'])
+    util.logToConsole(ib_logging_level)
+
     logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="[%(asctime)s]%(levelname)s:%(message)s")
     logging.info('start ib gateway...')
-    logging.info('---ib gateway info---')
+    logging.info('---ib settings---')
+    logging.info('ib_insync logging level={}'.format(ib_logging_level))
+    logging.info('ib_insync port={}'.format(ib_port))
+    logging.info('---ib gateway settings---')
     twsPath = os.environ['twsPath']
-    logging.info('twsPath', twsPath)
+    logging.info('twsPath={}'.format(twsPath))
     gatewayRootPath = "{}/ibgateway".format(twsPath)
     ib_gateway_version = int(os.listdir(gatewayRootPath)[0])
     gatewayPath = "{}/{}".format(gatewayRootPath, ib_gateway_version)
     logging.info("ib gateway version:{}".format(ib_gateway_version))
     logging.info("ib gateway path:{}".format(gatewayPath))
+    
     logging.info('-------------------')
     account = IBAccount.account()
     password = IBAccount.password()
@@ -34,12 +42,16 @@ if __name__ == "__main__":
         logging.info('IB gateway disconnected')
     ib.connectedEvent += onConnected
     ib.disconnectedEvent += onDisconnected
-    watchdog = Watchdog(ibc, ib, port=4001, 
-        connectTimeout=int(os.environ['IBGW_WATCHDOG_CONNECT_TIMEOUT']), 
-        appStartupTime=int(os.environ['IBGW_WATCHDOG_APP_STARTUP_TIME']), 
+    watchdog = Watchdog(ibc, ib, 
+        port=ib_port,
+        readonly=os.environ.get('IBGW_WATCHDOG_READONLY', 'False') == 'True',
+        connectTimeout=int(os.environ['IBGW_WATCHDOG_CONNECT_TIMEOUT']),
+        appStartupTime=int(os.environ['IBGW_WATCHDOG_APP_STARTUP_TIME']),
         appTimeout=int(os.environ['IBGW_WATCHDOG_APP_TIMEOUT']),
         retryDelay=int(os.environ['IBGW_WATCHDOG_RETRY_DELAY']),
-        probeTimeout=int(os.environ['IBGW_WATCHDOG_PROBE_TIMEOUT']))
+        probeTimeout=int(os.environ['IBGW_WATCHDOG_PROBE_TIMEOUT']),
+        probeContract=Stock(os.environ.get('IBGW_WATCHDOG_PROBE_SYMBOL', 'AAPL'), exchange='SMART', currency='USD', primaryExchange='NASDAQ')
+    )
     def onWatchDogStarting(_):
         logging.info('WatchDog Starting...')
     def onWatchDogStarted(_):

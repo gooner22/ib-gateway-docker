@@ -37,7 +37,8 @@ jobs:
         -e IB_ACCOUNT=$IB_ACCOUNT \
         -e IB_PASSWORD=$IB_PASSWORD \
         -e TRADE_MODE=paper \
-        -p 4001:4002 \
+        -e IB_PORT=4002 \
+        -p 4002:4002 \
         -d \
         $IMAGE_NAME tail -f /dev/null;
         sleep 30;

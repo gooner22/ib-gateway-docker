@@ -71,6 +71,11 @@ RUN chmod +x /root/ib_account.py
 ENV DISPLAY=:0
 ENV GCP_SECRET=False
 
+# logging level to improve verbosity
+ENV IB_LOGGING_LEVEL=INFO
+# IB port is used only to listen IB gateway running in docker - it's not exposed in compare to IBGW_PORT
+ENV IB_PORT 4001
+
 ENV IBGW_PORT 4002
 ENV IBGW_WATCHDOG_CONNECT_TIMEOUT 30
 ENV IBGW_WATCHDOG_APP_STARTUP_TIME 30
