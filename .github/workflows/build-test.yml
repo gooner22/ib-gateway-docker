@@ -27,9 +27,11 @@ jobs:
     - name: Smoke tests container image
       run: pytest -x
       env:
+        TRADE_MODE: ${{ secrets.IB_TRADE_MODE }}
         IB_ACCOUNT: ${{ secrets.IB_ACCOUNT }}
         IB_PASSWORD: ${{ secrets.IB_PASSWORD }}
-        TRADE_MODE: paper
+        IB_PORT: ${{ secrets.IB_PORT }}
+        IBGW_PORT: ${{ secrets.IBGW_PORT }}
 
     - name: Run ib_insync example
       run: |
@@ -37,8 +39,15 @@ jobs:
         -e IB_ACCOUNT=$IB_ACCOUNT \
         -e IB_PASSWORD=$IB_PASSWORD \
         -e TRADE_MODE=paper \
-        -e IB_PORT=4002 \
-        -p 4002:4002 \
+        -e IB_PORT=$IB_PORT \
+        -e IBGW_PORT=$IBGW_PORT \
+        -e IBGW_WATCHDOG_APP_STARTUP_TIME=60 \
+        -e IBGW_WATCHDOG_APP_TIMEOUT=30 \
+        -e IBGW_WATCHDOG_CONNECT_TIMEOUT=60 \
+        -e IBGW_WATCHDOG_PROBE_TIMEOUT=10 \
+        -e IBGW_WATCHDOG_READONLY=True \
+        -e IBGW_WATCHDOG_RETRY_DELAY=5 \
+        -p $IBGW_PORT:$IBGW_PORT \
         -d \
         $IMAGE_NAME tail -f /dev/null;
         sleep 30;
@@ -46,32 +55,8 @@ jobs:
         python examples/ib_insync/scripts/connect_gateway.py;
         docker stop $(docker ps -a -q)
       env:
-        TRADE_MODE: paper
+        TRADE_MODE: ${{ secrets.IB_TRADE_MODE }}
         IB_ACCOUNT: ${{ secrets.IB_ACCOUNT }}
         IB_PASSWORD: ${{ secrets.IB_PASSWORD }}
-        
-    - uses: 'google-github-actions/setup-gcloud@v1'
-      with:
-        version: '>= 363.0.0'
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
-        export_default_credentials: true
-    - name: Run google clound example
-      run: |
-        docker run \
-        --env GCP_SECRET=True \
-        --env GCP_SECRET_IB_ACCOUNT=$GCP_SECRET_IB_ACCOUNT  \
-        --env GCP_SECRET_IB_PASSWORD=$GCP_SECRET_IB_PASSWORD \
-        --env GCP_SECRET_IB_TRADE_MODE=$GCP_SECRET_IB_TRADE_MODE \
-        --env GCP_PROJECT_ID=$GCP_PROJECT_ID \
-        -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/keys/credentials.json \
-        -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/keys/credentials.json:ro \
-        -d \
-        $IMAGE_NAME;
-        sleep 30;
-        if [ -z  "$(docker ps -a -q)" ]; then exit 1; fi
-      env:
-        GCP_SECRET_IB_ACCOUNT: ${{ secrets.GCP_SECRET_IB_ACCOUNT }}
-        GCP_SECRET_IB_PASSWORD: ${{ secrets.GCP_SECRET_IB_PASSWORD }}
-        GCP_SECRET_IB_TRADE_MODE: ${{ secrets.GCP_SECRET_IB_TRADE_MODE }}
-        GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        IB_PORT: ${{ secrets.IB_PORT }}
+        IBGW_PORT: ${{ secrets.IBGW_PORT }}

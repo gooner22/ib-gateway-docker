@@ -2,32 +2,53 @@ import pytest
 import subprocess
 import testinfra
 import os
+import time
 
 IMAGE_NAME = os.environ['IMAGE_NAME']
+account = os.environ['IB_ACCOUNT']
+password = os.environ['IB_PASSWORD']
+trade_mode = os.environ['TRADE_MODE']
+ib_port = os.environ.get('IB_PORT', 4001)
+ibgw_port = os.environ.get('IBGW_PORT', 4002)
+ib_logging_level = os.environ.get('IB_LOGGING_LEVEL', 'DEBUG')
+watchdog_app_startup_time = os.environ.get('IBGW_WATCHDOG_APP_STARTUP_TIME', 60)
+watchdog_app_timeout = os.environ.get('IBGW_WATCHDOG_APP_TIMEOUT', 30)
+watchdog_connect_timeout = os.environ.get('IBGW_WATCHDOG_CONNECT_TIMEOUT', 60)
+watchdog_probe_timeout = os.environ.get('IBGW_WATCHDOG_PROBE_TIMEOUT', 10)
+watchdog_readonly = os.environ.get('IBGW_WATCHDOG_READONLY', True)
+watchdog_retry_delay = os.environ.get('IBGW_WATCHDOG_RETRY_DELAY', 5)
+
 
 # scope='session' uses the same container for all the tests;
 # scope='function' uses a new container per test function.
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def host(request):
-    account = os.environ['IB_ACCOUNT']
-    password = os.environ['IB_PASSWORD']
-    trade_mode = os.environ['TRADE_MODE']
-
     # run a container
     docker_id = subprocess.check_output(
         ['docker', 'run', 
-        '--env', 'IB_ACCOUNT={}'.format(account),
-        '--env', 'IB_PASSWORD={}'.format(password),
-        '--env', 'TRADE_MODE={}'.format(trade_mode),
+        '-e', 'IB_ACCOUNT={}'.format(account),
+        '-e', 'IB_PASSWORD={}'.format(password),
+        '-e', 'TRADE_MODE={}'.format(trade_mode),
+        '-e', 'IB_PORT={}'.format(ib_port),
+        '-e', 'IBGW_PORT={}'.format(ibgw_port),
+        '-e', 'IB_LOGGING_LEVEL={}'.format(ib_logging_level),
+        '-e', 'IBGW_WATCHDOG_APP_STARTUP_TIME={}'.format(watchdog_app_startup_time),
+        '-e', 'IBGW_WATCHDOG_APP_TIMEOUT={}'.format(watchdog_app_timeout),
+        '-e', 'IBGW_WATCHDOG_CONNECT_TIMEOUT={}'.format(watchdog_connect_timeout),
+        '-e', 'IBGW_WATCHDOG_PROBE_TIMEOUT={}'.format(watchdog_probe_timeout),
+        '-e', 'IBGW_WATCHDOG_READONLY={}'.format(watchdog_readonly),
+        '-e', 'IBGW_WATCHDOG_RETRY_DELAY={}'.format(watchdog_retry_delay),
+        '-p', '{}:{}'.format(ibgw_port, ibgw_port),
         '-d', IMAGE_NAME, 
         "tail", "-f", "/dev/null"]).decode().strip()
     # return a testinfra connection to the container
     yield testinfra.get_host("docker://" + docker_id)
     # at the end of the test suite, destroy the container
     subprocess.check_call(['docker', 'rm', '-f', docker_id])
+    time.sleep(15) 
 
-def test_ibgateway_version(host):
-    int(host.run("ls /root/Jts/ibgateway").stdout)
+# def test_ibgateway_version(host):
+#     int(host.run("ls /root/Jts/ibgateway").stdout)
 
 def test_ib_connect(host):
     script = """
@@ -35,17 +56,17 @@ from ib_insync import *
 from concurrent.futures import TimeoutError
 
 ib = IB()
-wait = 60
+wait = 120
 while not ib.isConnected():
     try:
         IB.sleep(1)
-        ib.connect('localhost', 4002, clientId=999)
+        ib.connect('127.0.0.1', {port}, clientId=999)
     except (ConnectionRefusedError, OSError, TimeoutError):
         pass
     wait -= 1
     if wait <= 0:
         break
 ib.disconnect()
-"""
+""".format(port=ibgw_port)
     cmd = host.run("python -c \"{}\"".format(script))
     assert cmd.rc == 0

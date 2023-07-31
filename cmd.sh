@@ -17,6 +17,10 @@ echo "Setup port forwarding..."
 socat TCP-LISTEN:$IBGW_PORT,fork TCP:localhost:$IB_PORT,forever &
 echo "*****************************"
 
+# NOTE: this line clears jts.ini as it seems cached file is not plaing good with IBG software, at least for me
+echo "remove jts.ini"
+rm /root/Jts/jts.ini || true
+
 python /root/bootstrap.py
 
 echo "IB gateway is ready."
